@@ -1,0 +1,3 @@
+status.tracencode.tech {
+	reverse_proxy status:8080
+}

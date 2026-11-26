@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TraceNcode Status</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f5f4f1;
+      --card: #ffffff;
+      --line: #e6e3db;
+      --text: #1a1c17;
+      --muted: #5d615a;
+      --faint: #8a8e86;
+      --up: #157a45;
+      --up-bg: #e8f6ee;
+      --degraded: #8d6800;
+      --degraded-bg: #fbf4df;
+      --down: #c23636;
+      --down-bg: #fdeeee;
+      --unknown: #6f736c;
+      --unknown-bg: #f1f0eb;
+      --empty: #eceae4;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      color: var(--text);
+      font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+      background: var(--bg);
+      letter-spacing: -0.011em;
+    }
+    main {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 36px 0 64px;
+    }
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(255, 255, 255, 0.92);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(12px);
+    }
+    .nav-inner {
+      width: min(1120px, calc(100% - 32px));
+      height: 64px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .brand { display: flex; align-items: center; flex: 0 0 auto; }
+    .logo {
+      display: block;
+      height: 36px;
+      width: auto;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      margin-left: auto;
+      min-width: 0;
+    }
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 6px 10px;
+      border-radius: 8px;
+      white-space: nowrap;
+    }
+    .nav-links a:hover { color: var(--text); background: #efeee8; }
+    .nav-links a[aria-current="page"] { color: var(--text); background: #efeee8; }
+    .banner {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px 18px;
+    }
+    .banner.operational { box-shadow: inset 3px 0 0 var(--up); }
+    .banner.degraded, .banner.unknown { box-shadow: inset 3px 0 0 var(--degraded); }
+    .banner.outage { box-shadow: inset 3px 0 0 var(--down); }
+    h1 {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.25;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    .summary {
+      color: var(--muted);
+      margin: 2px 0 0;
+      font-size: 14px;
+    }
+    .updated {
+      margin-left: auto;
+      color: var(--faint);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 99px;
+      background: var(--unknown);
+      flex: 0 0 auto;
+    }
+    .dot.up { background: var(--up); }
+    .dot.degraded, .dot.unknown { background: var(--degraded); }
+    .dot.outage, .dot.down { background: var(--down); }
+    .board {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .row {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px 18px 16px;
+      min-width: 0;
+    }
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .name { font-size: 16px; font-weight: 600; }
+    .desc {
+      margin-top: 2px;
+      color: var(--faint);
+      font-size: 12px;
+    }
+    .meta {
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 12px;
+      line-height: 1.45;
+      flex-wrap: wrap;
+    }
+    .meta span { margin-left: auto; }
+    .meta a { color: inherit; text-decoration: none; overflow-wrap: anywhere; }
+    .meta a:hover { color: var(--text); }
+    .strip-head, .strip-foot {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--faint);
+      font-size: 12px;
+    }
+    .strip-head { margin-top: 16px; }
+    .strip-head strong {
+      color: var(--text);
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+    }
+    .strip {
+      display: grid;
+      grid-template-columns: repeat(90, 1fr);
+      gap: 2px;
+      height: 30px;
+      margin-top: 8px;
+    }
+    .strip-foot { margin-top: 6px; font-size: 11px; }
+    .cell {
+      height: 100%;
+      border-radius: 2px;
+      background: var(--empty);
+    }
+    .cell.up { background: var(--up); }
+    .cell.mid { background: var(--degraded); }
+    .cell.down { background: var(--down); }
+    .cell[title] { cursor: default; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 4px 9px 4px 8px;
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .pill i {
+      width: 6px;
+      height: 6px;
+      border-radius: 99px;
+      background: currentColor;
+      display: inline-block;
+    }
+    .up-text { color: var(--up); background: var(--up-bg); }
+    .degraded-text, .unknown-text { color: var(--degraded); background: var(--degraded-bg); }
+    .unknown-text { color: var(--unknown); background: var(--unknown-bg); }
+    .down-text { color: var(--down); background: var(--down-bg); }
+    .error {
+      margin-top: 6px;
+      color: var(--down);
+      font-size: 12px;
+      max-width: 420px;
+    }
+    footer {
+      margin-top: 22px;
+      color: var(--faint);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    footer code {
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      color: var(--muted);
+    }
+    @media (max-width: 640px) {
+      .board { grid-template-columns: 1fr; }
+      .nav-inner { height: 56px; }
+      .logo { height: 32px; }
+      .nav-links { overflow-x: auto; }
+      .banner { align-items: flex-start; flex-wrap: wrap; }
+      .updated { margin-left: 24px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .pulse { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="/" aria-label="TraceNcode status">
+        <img class="logo" src="/logo.png" alt="TraceNcode Technologies">
+      </a>
+      <div class="nav-links">
+        <a href="/" aria-current="page">Status</a>
+        <a href="https://erp.tracencode.tech" target="_blank" rel="noreferrer">ERP</a>
+        <a href="https://career.tracencode.tech" target="_blank" rel="noreferrer">Careers</a>
+        <a href="https://drive.tracencode.tech" target="_blank" rel="noreferrer">Drive</a>
+        <a href="https://chat.tracencode.tech" target="_blank" rel="noreferrer">Mattermost</a>
+      </div>
+    </div>
+  </nav>
+  <main>
+    <section class="banner unknown" id="banner">
+      <span class="dot" id="dot"></span>
+      <div>
+        <h1 id="headline">Checking services</h1>
+        <p class="summary" id="summary">The first probe is in progress.</p>
+      </div>
+      <div class="updated" id="updated">waiting</div>
+    </section>
+    <section class="board" id="board" aria-live="polite"></section>
+    <footer>
+      Operational means an HTTPS response of 2xx or 3xx. A 4xx is degraded. Timeouts, TLS failures, and 5xx are down.
+      Checked every <code id="every">60</code> seconds from this host. History is kept for 90 days.
+    </footer>
+  </main>
+  <script>
+    const headlines = {
+      operational: "All systems operational",
+      degraded: "Some systems are degraded",
+      outage: "Some systems are down",
+      unknown: "Checking services",
+    };
+
+    function hostOf(url) {
+      try { return new URL(url).host; } catch { return url; }
+    }
+
+    function ago(iso) {
+      if (!iso) return "not yet";
+      const then = new Date(iso).getTime();
+      const seconds = Math.max(0, Math.round((Date.now() - then) / 1000));
+      if (seconds < 5) return "just now";
+      if (seconds < 60) return seconds + "s ago";
+      const minutes = Math.round(seconds / 60);
+      if (minutes < 60) return minutes + "m ago";
+      return Math.round(minutes / 60) + "h ago";
+    }
+
+    function ist(iso) {
+      if (!iso) return "";
+      return new Intl.DateTimeFormat("en-IN", {
+        timeZone: "Asia/Kolkata",
+        day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
+      }).format(new Date(iso));
+    }
+
+    function label(status) {
+      if (status === "up") return "Operational";
+      if (status === "degraded") return "Degraded";
+      if (status === "down") return "Down";
+      return "Checking";
+    }
+
+    function cellClass(uptime) {
+      if (uptime == null) return "";
+      if (uptime >= 99) return "up";
+      if (uptime >= 90) return "mid";
+      return "down";
+    }
+
+    function render(data) {
+      document.getElementById("headline").textContent = headlines[data.overall] || headlines.unknown;
+      document.getElementById("every").textContent = String(data.interval_seconds || 60);
+      document.getElementById("banner").className = "banner " + (data.overall || "unknown");
+      document.getElementById("dot").className = "dot " + (data.overall === "operational" ? "up" : data.overall);
+      document.getElementById("updated").textContent = "Updated " + ago(data.checked_at);
+
+      const down = data.services.filter((s) => s.status === "down").length;
+      const degraded = data.services.filter((s) => s.status === "degraded").length;
+      const summary = document.getElementById("summary");
+      if (data.overall === "operational") {
+        summary.textContent = data.services.length + " services responding.";
+      } else if (data.overall === "unknown") {
+        summary.textContent = "The first probe is in progress.";
+      } else {
+        const parts = [];
+        if (down) parts.push(down + " down");
+        if (degraded) parts.push(degraded + " degraded");
+        summary.textContent = parts.join(" · ") + ".";
+      }
+
+      const board = document.getElementById("board");
+      board.replaceChildren();
+      for (const service of data.services) {
+        const row = document.createElement("article");
+        row.className = "row";
+
+        const top = document.createElement("div");
+        top.className = "top";
+
+        const identity = document.createElement("div");
+        const name = document.createElement("div");
+        name.className = "name";
+        name.textContent = service.name;
+        identity.appendChild(name);
+        if (service.description) {
+          const desc = document.createElement("div");
+          desc.className = "desc";
+          desc.textContent = service.description;
+          identity.appendChild(desc);
+        }
+
+        const tone = service.status === "up" ? "up" : service.status === "down" ? "down" : service.status;
+        const pill = document.createElement("div");
+        pill.className = "pill " + tone + "-text";
+        pill.innerHTML = "<i></i><span></span>";
+        pill.querySelector("span").textContent = label(service.status);
+
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        const link = document.createElement("a");
+        link.target = "_blank";
+        link.rel = "noreferrer";
+        link.href = service.url;
+        link.textContent = hostOf(service.url);
+        const latencyEl = document.createElement("span");
+        const latency = service.latency_ms == null ? "—" : service.latency_ms + " ms";
+        latencyEl.textContent = service.checked_at ? latency + " · " + ist(service.checked_at) : latency;
+        meta.append(link, latencyEl);
+
+        const stripHead = document.createElement("div");
+        stripHead.className = "strip-head";
+        const stripLabel = document.createElement("span");
+        stripLabel.textContent = "90-day uptime";
+        const stripPct = document.createElement("strong");
+        stripPct.textContent = service.uptime_90d == null ? "—" : service.uptime_90d.toFixed(2) + "%";
+        stripHead.append(stripLabel, stripPct);
+
+        const stripFoot = document.createElement("div");
+        stripFoot.className = "strip-foot";
+        stripFoot.innerHTML = "<span>90 days ago</span><span>Today</span>";
+
+        const strip = document.createElement("div");
+        strip.className = "strip";
+        strip.setAttribute("aria-hidden", "true");
+        for (const day of service.days) {
+          const cell = document.createElement("div");
+          cell.className = "cell " + cellClass(day.uptime);
+          const pct = day.uptime == null ? "no data" : day.uptime + "% up";
+          cell.title = day.date + " · " + pct;
+          strip.appendChild(cell);
+        }
+
+        top.append(identity, pill);
+        row.append(top, meta, stripHead, strip, stripFoot);
+        if (service.error) {
+          const err = document.createElement("div");
+          err.className = "error";
+          err.textContent = service.error;
+          row.insertBefore(err, stripHead);
+        }
+        board.appendChild(row);
+      }
+    }
+
+    async function refresh() {
+      try {
+        const res = await fetch("/api/status", { cache: "no-store" });
+        render(await res.json());
+      } catch (err) {
+        document.getElementById("headline").textContent = "Status page unreachable";
+        document.getElementById("summary").textContent = "Could not load /api/status.";
+      }
+    }
+
+    refresh();
+    setInterval(refresh, 10000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+# Free web services on Render sleep when idle, which pauses probes.
+# Move plan to starter and add a disk at /data to keep 90 days of history.
+services:
+  - type: web
+    name: tracencode-status
+    runtime: docker
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+    envVars:
+      - key: DATA_DIR
+        value: /data
+      - key: CHECK_INTERVAL
+        value: "60"

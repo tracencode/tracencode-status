@@ -1,0 +1,26 @@
+[
+  {
+    "id": "erp",
+    "name": "ERP",
+    "url": "https://erp.tracencode.tech",
+    "description": "Odoo"
+  },
+  {
+    "id": "career",
+    "name": "Careers",
+    "url": "https://career.tracencode.tech",
+    "description": "Odoo"
+  },
+  {
+    "id": "drive",
+    "name": "Drive",
+    "url": "https://drive.tracencode.tech",
+    "description": "OpenCloud"
+  },
+  {
+    "id": "chat",
+    "name": "Mattermost",
+    "url": "https://chat.tracencode.tech",
+    "description": "Team chat"
+  }
+]
